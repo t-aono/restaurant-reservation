@@ -16,7 +16,7 @@
             {{ $refs.calendar.title }}
           </v-toolbar-title>
           <v-spacer></v-spacer>
-          <v-btn outlined class="mr-4" color="grey darken-2" @click="addEvent" v-show="type === 'day'">
+          <v-btn outlined class="mr-4" color="grey darken-2" @click="openForm" v-show="type === 'day'">
             予約する
           </v-btn>
           <v-menu bottom right>
@@ -27,18 +27,12 @@
               </v-btn>
             </template>
             <v-list>
-              <!-- <v-list-item @click="type = 'day'">
-                <v-list-item-title>Day</v-list-item-title>
-              </v-list-item> -->
               <v-list-item @click="type = 'week'">
                 <v-list-item-title>Week</v-list-item-title>
               </v-list-item>
               <v-list-item @click="type = 'month'">
                 <v-list-item-title>Month</v-list-item-title>
               </v-list-item>
-              <!-- <v-list-item @click="type = '4day'">
-                <v-list-item-title>4 days</v-list-item-title>
-              </v-list-item> -->
             </v-list>
           </v-menu>
         </v-toolbar>
@@ -47,10 +41,13 @@
         <v-calendar
           ref="calendar"
           v-model="focus"
-          color="lime"
+          color="lime"  
           :events="events"
           :event-color="getEventColor"
           :type="type"
+          :interval-format="intervalFormat"
+          :first-time="intervals[0]"
+          :interval-count="intervals.length / 2 + 2"
           @click:event="showEvent"
           @click:more="viewDay"
           @click:date="viewDay"
@@ -63,28 +60,36 @@
         >
           <v-card color="grey lighten-4" min-width="350px" flat>
             <v-toolbar color="green" dark>
-              <v-btn icon>
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-              <v-toolbar-title v-html="selectedEvent.name"></v-toolbar-title>
+              <v-toolbar-title>予約フォーム</v-toolbar-title>
               <v-spacer></v-spacer>
               <v-btn icon @click="newReserve = false">
                 <v-icon>mdi-close</v-icon>
               </v-btn>
             </v-toolbar>
             <v-card-text>
-              <span>時間を選択して下さい。</span>
+              <span>お名前を入力してください。</span>
+              <v-text-field v-model="name"></v-text-field>
+            </v-card-text>
+            <v-card-text>
+              <span>時間と人数を選択して下さい。</span>
             </v-card-text>
             <v-card-text>
               <v-select
                 :items="intervals"
                 label="予約時刻"
                 outlined
+                v-model="time"
+              ></v-select>
+              <v-select
+                :items="[1, 2, 3, 4, 5]"
+                label="予約人数"
+                outlined
+                v-model="peple"
               ></v-select>
             </v-card-text>
-            <v-card-action>
-              <v-btn color="green" dark class="ml-3 mb-3">予約</v-btn>
-            </v-card-action>
+            <v-card-actions>
+              <v-btn color="green" dark class="ml-3 mb-3" @click="addEvent">予約</v-btn>
+            </v-card-actions>
           </v-card>
         </v-menu>
         <v-menu
@@ -95,26 +100,20 @@
         >
           <v-card color="grey lighten-4" min-width="350px" flat>
             <v-toolbar :color="selectedEvent.color" dark>
-              <v-btn icon>
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-              <v-toolbar-title v-html="selectedEvent.name"></v-toolbar-title>
+              <v-toolbar-title>
+                <span v-html="selectedEvent.detail"></span>
+              </v-toolbar-title>
               <v-spacer></v-spacer>
-              <v-btn icon>
-                <v-icon>mdi-heart</v-icon>
-              </v-btn>
-              <v-btn icon>
-                <v-icon>mdi-dots-vertical</v-icon>
-              </v-btn>
             </v-toolbar>
             <v-card-text>
-              <span v-html="selectedEvent.details"></span>
+              <span v-html="selectedEvent.name"></span>
             </v-card-text>
-            <v-card-actions>
-              <v-btn text color="secondary" @click="selectedOpen = false">
-                Cancel
-              </v-btn>
-            </v-card-actions>
+            <v-card-text>
+              <span v-html="selectedEvent.start"></span>
+            </v-card-text>
+            <v-card-text>
+              <span v-html="selectedEvent"></span>
+            </v-card-text>
           </v-card>
         </v-menu>
       </v-sheet>
@@ -131,7 +130,6 @@ export default {
       month: "Month",
       week: "Week",
       day: "Day",
-      "4day": "4 Days",
     },
     selectedEvent: {},
     selectedElement: null,
@@ -145,10 +143,13 @@ export default {
       "event",
     ],
     intervals: [],
+    name: '',
+    time: '',
+    peple: '',
   }),
   mounted() {
     this.$refs.calendar.checkChange();
-    for (let i = 22; i <= 42; i++) {
+    for (let i = 22; i <= 40; i++) {  // 11:~20:00
       this.intervals.push(Math.floor(i / 2) + ":" +  ((i % 2 === 0) ? '00' : '30'))
     }
   },
@@ -193,41 +194,44 @@ export default {
 
       nativeEvent.stopPropagation();
     },
-    addEvent() {
+    intervalFormat(interval) {
+        return interval.time
+    },
+    openForm() {
       if (this.focus) {
         this.newReserve = true;
       } else {
         alert('日付を選択してください。');
       }
     },
-    updateRange({ start, end }) {
-      const events = [];
-
-      const min = new Date(`${start.date}T00:00:00`);
-      const max = new Date(`${end.date}T23:59:59`);
-      const days = (max.getTime() - min.getTime()) / 86400000;
-      const eventCount = this.rnd(days, days + 20);
-
-      for (let i = 0; i < eventCount; i++) {
-        const allDay = this.rnd(0, 3) === 0;
-        const firstTimestamp = this.rnd(min.getTime(), max.getTime());
-        const first = new Date(firstTimestamp - (firstTimestamp % 900000));
-        const secondTimestamp = this.rnd(2, allDay ? 288 : 8) * 900000;
-        const second = new Date(first.getTime() + secondTimestamp);
-
-        events.push({
-          name: this.names[this.rnd(0, this.names.length - 1)],
-          start: first,
-          end: second,
-          color: this.colors[this.rnd(0, this.colors.length - 1)],
-          timed: !allDay,
-        });
+    addEvent() {
+      let err = '';
+      if (!this.name) err += 'お名前を入力してください。\n';
+      if (!this.time) err += '時刻を選んでください。\n';
+      if (!this.peple) err += '人数を選んでください。\n';
+      if (err) {
+        alert(err);
+        return;
       }
-
-      this.events = events;
+      // 予約の追加
+      const first = new Date(this.focus + ' ' + this.time)
+      const second = new Date(this.focus);
+      second.setHours(first.getHours() + 2);
+      this.events.push({
+        name: this.name + ' 様',
+        detail: '仮予約',
+        start: first,
+        end: second,
+        color: 'lime',
+        timed: true
+      });
+      this.newReserve = false;
+      this.name = '';
+      this.time = '';
+      this.peple = '';
     },
-    rnd(a, b) {
-      return Math.floor((b - a + 1) * Math.random()) + a;
+    updateRange({ start, end }) {
+      console.log(start, end)
     },
   },
 };
