@@ -5,7 +5,7 @@
       color="white"
     >
       <div class="d-flex align-center">
-        <div class="text-h5">飲食店予約</div>
+        <div class="text-h5">レストラン予約</div>
       </div>
 
       <v-spacer></v-spacer>

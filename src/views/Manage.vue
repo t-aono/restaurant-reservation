@@ -16,8 +16,8 @@
             {{ $refs.calendar.title }}
           </v-toolbar-title>
           <v-spacer></v-spacer>
-          <v-btn outlined class="mr-4" color="grey darken-2" @click="openForm" v-show="type === 'day'">
-            予約する
+          <v-btn outlined class="mr-4" color="grey darken-2" @click="openForm" v-show="type === 'category'">
+            予約の追加
           </v-btn>
           <v-menu bottom right>
             <template v-slot:activator="{ on, attrs }">
@@ -37,7 +37,7 @@
           </v-menu>
         </v-toolbar>
       </v-sheet>
-      <v-sheet height="600">
+      <v-sheet height="700">
         <v-calendar
           ref="calendar"
           v-model="focus"
@@ -47,12 +47,15 @@
           :type="type"
           :interval-format="intervalFormat"
           :first-time="intervals[0]"
-          :interval-count="intervals.length / 2 + 2"
+          :interval-count="10"
+          category-show-all
+          :categories="categories"
           @click:event="showEvent"
           @click:more="viewDay"
           @click:date="viewDay"
           @change="updateRange"
-        ></v-calendar>
+        >
+        </v-calendar>
         <v-menu
           v-model="newReserve"
           :close-on-content-click="false" 
@@ -108,6 +111,18 @@
                 <span v-html="selectedEvent.status"></span>
               </v-toolbar-title>
               <v-spacer></v-spacer>
+              <v-btn text color="green" @click="fixReservation(selectedEvent.id)" v-if="selectedEvent.status === '仮予約'">
+                <v-icon>mdi-check</v-icon>
+                <span>確定</span>
+              </v-btn>
+              <v-btn text color="lime" @click="resetReservation(selectedEvent.id)" v-else>
+                <v-icon>mdi-restart</v-icon>
+                <span>未確定</span>
+              </v-btn>
+              <v-btn text color="orange darken-1" @click="cancelReservation(selectedEvent.id)">
+                <v-icon>mdi-close-circle-outline</v-icon>
+                <span>キャンセル</span>
+              </v-btn>
             </v-toolbar>
             <v-card-text v-if="selectedEvent.start">
               <div v-html="selectedEvent.name"></div>
@@ -134,29 +149,30 @@ export default {
       month: "月",
       week: "週",
       day: "日",
+      category: "日",
     },
     selectedEvent: {},
     selectedElement: null,
     selectedOpen: false,
     newReserve: false,
     events: [],
+    counts: [],
     colors: [
       "green",
     ],
     names: [
       "event",
     ],
-    intervals: [],
+    // 11:00~15:00 17:00~21:00
+    intervals: ['11:00', '11:30', '12:00', '12:30', '13:00', '17:00', '17:30', '18:00', '18:30', '19:00'],
     name: '',
     mail: '',
     time: '',
     peple: '',
+    categories: ['Aテーブル', 'Bテーブル', 'Cテーブル', 'Dテーブル', 'Eテーブル'],
   }),
   mounted() {
     this.$refs.calendar.checkChange();
-    for (let i = 22; i <= 40; i++) {  // 11:~20:00
-      this.intervals.push(Math.floor(i / 2) + ":" +  ((i % 2 === 0) ? '00' : '30'))
-    }
   },
   methods: {
     viewDay({ date }) {
@@ -166,7 +182,7 @@ export default {
         alert('明日以降の日付を選択してください。');
       } else {
         this.focus = date;
-        this.type = "day";
+        this.type = "category";//"day";
       }
     },
     getEventColor(event) {
@@ -204,7 +220,19 @@ export default {
     },
     openForm() {
       this.newReserve = true;
-      console.log(this.events)
+      // 予約数をカウント
+      this.events.forEach(e => {
+        if (this.focus === e.start.getFullYear() + '-' + ('0' + (e.start.getMonth() + 1)).slice(-2) + '-' + ('0' + e.start.getDate()).slice(-2)) {
+          const time1 = e.start.getHours() + ':' + ('0' + e.end.getMinutes()).slice(-2);
+          const time2 = (e.start.getHours() + 1) + ':' + ('0' + e.end.getMinutes()).slice(-2);
+          this.counts[time1] = (this.counts[time1]) ? this.counts[time1] + 1 : 1;
+          this.counts[time2] = (this.counts[time2]) ? this.counts[time2] + 1 : 1;
+        }
+      });
+      for(let i = 0; i < this.intervals.length; i++) {
+        // 満席時間はセレクトボックスから消す
+        if (this.counts[this.intervals[i]] >= 2) this.intervals.splice(i, 1);
+      }
     },
     addEvent() {
       /*let err = '';
@@ -240,12 +268,36 @@ export default {
       this.time = '';
       this.peple = '';
     },
+    fixReservation(id) {
+      // 予約の確定
+      db.collection('reservations').doc(id).update({
+        status: '予約',
+        color: 'green'
+      })
+      .then(() => {
+        this.selectedOpen = false;
+        this.updateRange();
+      });
+    },
+    resetReservation(id) {
+      // 未確定に
+      db.collection('reservations').doc(id).update({
+        status: '仮予約',
+        color: 'lime'
+      })
+      .then(() => {
+        this.selectedOpen = false;
+        this.updateRange();
+      });
+    },
     updateRange() {
       this.events = [];
       db.collection('reservations').get().then(snapshot => {
         snapshot.forEach(doc => {
           const data = doc.data();
           const event = {
+            id: doc.id,
+            category: data.category,
             name: data.name,
             status: data.status,
             start: new Date(data.start.toDate()),
@@ -257,7 +309,7 @@ export default {
           this.events.push(event);
         })
       })
-    },
+    }
   },
 };
 </script>
