@@ -10,14 +10,10 @@
 
       <v-spacer></v-spacer>
 
-      <!-- <v-btn
-        href="https://github.com/vuetifyjs/vuetify/releases/latest"
-        target="_blank"
-        text
-      >
-        <span class="mr-2">Latest Release</span>
-        <v-icon>mdi-open-in-new</v-icon>
-      </v-btn> -->
+      <v-btn text @click="logout" v-show="(this.$route.path === '/manage')">
+        <v-icon>mdi-logout</v-icon>
+        <span class="mr-2"> ログアウト</span>
+      </v-btn>
     </v-app-bar>
 
     <v-main>
@@ -30,9 +26,14 @@
 
 export default {
   name: 'App',
-
   data: () => ({
     //
   }),
+  methods: {
+    logout() {
+      localStorage.removeItem('login');
+      this.$router.push('/login');
+    }
+  }
 };
 </script>
