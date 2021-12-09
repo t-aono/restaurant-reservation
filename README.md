@@ -18,6 +18,5 @@
 - 管理画面ログイン。
 - 管理画面で予約データの更新・削除。
 
-<br>
-
-画面イメージはこちら → [Notion](https://ossified-elephant-7c0.notion.site/0ef3a755792d45f6a6d940f618737524)
+### 画面イメージ
+![](https://user-images.githubusercontent.com/46856574/145412117-c0ce0733-1ccf-4b52-98e5-ad6c3ccdd7dd.png)
