@@ -13,6 +13,8 @@ The administrator logs in to confirm, cancel, edit, or cancel the reservation.
 
 ## Demo
 
+![etAmcjDp76XcNbAEAfQ91641522259-1641522423](https://user-images.githubusercontent.com/46856574/148481533-bb44d864-61b7-486a-a56a-166611254d41.gif)
+
 <!-- ## VS. -->
 
 ## Requirement
