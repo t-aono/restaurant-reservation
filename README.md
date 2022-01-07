@@ -49,7 +49,7 @@ The following work is required before installation.
 1. Get source code
 
    ```
-   git clone git@github.com:t-aono/vote-graph.git
+   git clone git@github.com:t-aono/restaurant-reservation.git
    ```
 
 2. Copy .env-example to create .env and set environment variables for your Firebase project and SendGrid ApiKey.
